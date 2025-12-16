@@ -41,9 +41,15 @@ function closeModal() {
 }
 
 async function getUsers() {
-  const res = await fetch(API_URL);
-  users = await res.json();
-  renderUsers(users);
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error("Fetch failed");
+    const data = await res.json();
+    users = Array.isArray(data) ? data : [];
+    renderUsers(users);
+  } catch {
+    errorEl.textContent = "Không tải được danh sách user";
+  }
 }
 
 async function createUser(user) {
@@ -52,6 +58,7 @@ async function createUser(user) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(user),
   });
+  if (!res.ok) throw new Error("Create failed");
   return await res.json();
 }
 
@@ -61,11 +68,13 @@ async function updateUser(id, user) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(user),
   });
+  if (!res.ok) throw new Error("Update failed");
   return await res.json();
 }
 
 async function deleteUser(id) {
-  await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Delete failed");
 }
 
 function renderUsers(list) {
@@ -76,11 +85,11 @@ function renderUsers(list) {
     div.className = "user-card";
 
     div.innerHTML = `
-      <div class="avatar">${user.name.charAt(0).toUpperCase()}</div>
-      <h3>${user.name}</h3>
-      <p><strong>@${user.username}</strong></p>
-      <p>${user.email}</p>
-      <p>${user.phone}</p>
+      <div class="avatar">${user.name?.charAt(0).toUpperCase() || "?"}</div>
+      <h3>${user.name || ""}</h3>
+      <p><strong>@${user.username || ""}</strong></p>
+      <p>${user.email || ""}</p>
+      <p>${user.phone || ""}</p>
 
       <div class="user-actions">
         <button class="btn-view" data-id="${user.id}">Edit</button>
@@ -97,7 +106,7 @@ function validateUser(user) {
   if (!user.username) return "Username bắt buộc";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email))
     return "Email không hợp lệ";
-  if (!user.phone) return "Phone bắt buộc";
+  if (!user.phone  || user.phone.length <= 10 ) return "Phone bắt buộc";
   return null;
 }
 
@@ -120,45 +129,59 @@ if (userForm) {
 
     errorEl.textContent = "";
 
-    if (editingUserId) {
-      const updatedUser = await updateUser(editingUserId, userData);
-      users = users.map((u) =>
-        u.id === editingUserId ? { ...u, ...updatedUser } : u
-      );
-    } else {
-      const createdUser = await createUser(userData);
-      users.unshift(createdUser);
-    }
+    try {
+      if (editingUserId !== null) {
+        const updatedUser = await updateUser(editingUserId, userData);
+        users = users.map((u) =>
+          u.id === editingUserId ? { ...u, ...updatedUser } : u
+        );
+      } else {
+        const createdUser = await createUser(userData);
+        const newUser = {
+          ...userData,
+          id: createdUser.id || Date.now(),
+        };
+        users = [newUser, ...users];
+      }
 
-    renderUsers(users);
-    closeModal();
+      renderUsers(users);
+      closeModal();
+    } catch {
+      errorEl.textContent = "Có lỗi xảy ra";
+    }
   });
 }
 
 if (userList) {
   userList.addEventListener("click", async (e) => {
-    const id = Number(e.target.dataset.id);
+    const btn = e.target.closest("button");
+    if (!btn) return;
+
+    const id = Number(btn.dataset.id);
     if (!id) return;
 
-    if (e.target.classList.contains("btn-delete")) {
-      const confirmDelete = confirm("Delete this user?");
-      if (!confirmDelete) return;
+    if (btn.classList.contains("btn-delete")) {
+      if (!confirm("Delete this user?")) return;
 
-      await deleteUser(id);
-      users = users.filter((u) => u.id !== id);
-      renderUsers(users);
+      try {
+        await deleteUser(id);
+        users = users.filter((u) => u.id !== id);
+        renderUsers(users);
+      } catch {
+        errorEl.textContent = "Xóa thất bại";
+      }
     }
 
-    if (e.target.classList.contains("btn-view")) {
+    if (btn.classList.contains("btn-view")) {
       const user = users.find((u) => u.id === id);
       if (!user) return;
 
       editingUserId = id;
 
-      nameInput.value = user.name;
-      usernameInput.value = user.username;
-      emailInput.value = user.email;
-      phoneInput.value = user.phone;
+      nameInput.value = user.name || "";
+      usernameInput.value = user.username || "";
+      emailInput.value = user.email || "";
+      phoneInput.value = user.phone || "";
 
       modal.classList.add("show");
     }
