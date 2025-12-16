@@ -106,7 +106,7 @@ function validateUser(user) {
   if (!user.username) return "Username bắt buộc";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email))
     return "Email không hợp lệ";
-  if (!user.phone  || user.phone.length <= 10 ) return "Phone bắt buộc";
+  if (!user.phone  || user.phone.length >= 10 ) return "Phone bắt buộc";
   return null;
 }
 
