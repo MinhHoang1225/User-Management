@@ -102,13 +102,24 @@ function renderUsers(list) {
 }
 
 function validateUser(user) {
-  if (!user.name || user.name.length < 3) return "Name quá ngắn";
-  if (!user.username) return "Username bắt buộc";
+  if (!user.name || user.name.trim().length < 3)
+    return "Invalid name";
+
+  if (!user.username || !user.username.trim())
+    return "Invalid username";
+
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email))
-    return "Email không hợp lệ";
-  if (!user.phone  || user.phone.length >= 10 ) return "Phone bắt buộc";
+    return "Invalid email";
+
+  if (
+    !user.phone ||
+    !/^\d{10}$/.test(user.phone.trim())
+  )
+    return "Invalid phone number";
+
   return null;
 }
+
 
 if (userForm) {
   userForm.addEventListener("submit", async (e) => {
