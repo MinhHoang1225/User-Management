@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Management System</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <div class="container">
+        <header class="header">
+          <h1>User Management</h1>
+          <p>Manage your users efficiently</p>
+        </header>
+
+        <section class="form-card">
+          <section class="actions">
+            <button id="openModalBtn" class="btn-primary">➕ Add User</button>
+          </section>
+        </section>
+
+        <section id="userList" class="user-list"></section>
+      </div>
+
+      <div id="userModal" class="modal">
+        <div class="modal-overlay"></div>
+
+        <div class="modal-content">
+          <h2>Add New User</h2>
+
+          <form id="userForm" class="user-form">
+            <input type="text" id="name" placeholder="Full name" />
+            <input type="text" id="username" placeholder="Username" />
+            <input type="email" id="email" placeholder="Email address" />
+            <input type="text" id="phone" placeholder="Phone number" />
+
+            <p id="error"></p>
+
+            <div class="modal-actions">
+              <button type="button" id="closeModalBtn" class="btn-cancel">
+                Cancel
+              </button>
+              <button type="submit" class="btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
