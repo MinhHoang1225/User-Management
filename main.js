@@ -13,28 +13,59 @@ const emailInput = document.getElementById("email");
 const phoneInput = document.getElementById("phone");
 
 let users = [];
+let editingUserId = null;
 
-openModalBtn.addEventListener("click", () => {
-  userModal.classList.add("show");
-});
-
-closeModalBtn.addEventListener("click", closeModal);
-
-userModal.addEventListener("click", (e) => {
-  if (e.target.classList.contains("modal-overlay")) {
-    closeModal();
-  }
-});
-
-function closeModal() {
-  userModal.classList.remove("show");
+if (openModalBtn) {
+  openModalBtn.addEventListener("click", () => {
+    modal.classList.add("show");
+  });
 }
 
+if (closeModalBtn) {
+  closeModalBtn.addEventListener("click", closeModal);
+}
+
+if (modal) {
+  modal.addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-overlay")) {
+      closeModal();
+    }
+  });
+}
+
+function closeModal() {
+  modal.classList.remove("show");
+  userForm.reset();
+  errorEl.textContent = "";
+  editingUserId = null;
+}
 
 async function getUsers() {
   const res = await fetch(API_URL);
   users = await res.json();
   renderUsers(users);
+}
+
+async function createUser(user) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+  return await res.json();
+}
+
+async function updateUser(id, user) {
+  const res = await fetch(`${API_URL}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+  return await res.json();
+}
+
+async function deleteUser(id) {
+  await fetch(`${API_URL}/${id}`, { method: "DELETE" });
 }
 
 function renderUsers(list) {
@@ -50,6 +81,11 @@ function renderUsers(list) {
       <p><strong>@${user.username}</strong></p>
       <p>${user.email}</p>
       <p>${user.phone}</p>
+
+      <div class="user-actions">
+        <button class="btn-view" data-id="${user.id}">Edit</button>
+        <button class="btn-delete" data-id="${user.id}">Delete</button>
+      </div>
     `;
 
     userList.appendChild(div);
@@ -65,39 +101,68 @@ function validateUser(user) {
   return null;
 }
 
-async function createUser(user) {
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(user),
-  });
+if (userForm) {
+  userForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  return await res.json();
+    const userData = {
+      name: nameInput.value.trim(),
+      username: usernameInput.value.trim(),
+      email: emailInput.value.trim(),
+      phone: phoneInput.value.trim(),
+    };
+
+    const error = validateUser(userData);
+    if (error) {
+      errorEl.textContent = error;
+      return;
+    }
+
+    errorEl.textContent = "";
+
+    if (editingUserId) {
+      const updatedUser = await updateUser(editingUserId, userData);
+      users = users.map((u) =>
+        u.id === editingUserId ? { ...u, ...updatedUser } : u
+      );
+    } else {
+      const createdUser = await createUser(userData);
+      users.unshift(createdUser);
+    }
+
+    renderUsers(users);
+    closeModal();
+  });
 }
 
-userForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+if (userList) {
+  userList.addEventListener("click", async (e) => {
+    const id = Number(e.target.dataset.id);
+    if (!id) return;
 
-  const newUser = {
-    name: nameInput.value.trim(),
-    username: usernameInput.value.trim(),
-    email: emailInput.value.trim(),
-    phone: phoneInput.value.trim(),
-  };
+    if (e.target.classList.contains("btn-delete")) {
+      const confirmDelete = confirm("Delete this user?");
+      if (!confirmDelete) return;
 
-  const error = validateUser(newUser);
-  if (error) {
-    errorEl.textContent = error;
-    return;
-  }
+      await deleteUser(id);
+      users = users.filter((u) => u.id !== id);
+      renderUsers(users);
+    }
 
-  errorEl.textContent = "";
+    if (e.target.classList.contains("btn-view")) {
+      const user = users.find((u) => u.id === id);
+      if (!user) return;
 
-  const createdUser = await createUser(newUser);
+      editingUserId = id;
 
-  users.unshift(createdUser);
-  renderUsers(users);
-  closeModal();
-});
+      nameInput.value = user.name;
+      usernameInput.value = user.username;
+      emailInput.value = user.email;
+      phoneInput.value = user.phone;
+
+      modal.classList.add("show");
+    }
+  });
+}
 
 getUsers();
